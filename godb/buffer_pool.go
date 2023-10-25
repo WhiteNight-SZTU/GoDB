@@ -63,5 +63,9 @@ func (bp *BufferPool) BeginTransaction(tid TransactionID) error {
 // of pages in the BufferPool in a map keyed by the [DBFile.pageKey].
 func (bp *BufferPool) GetPage(file DBFile, pageNo int, tid TransactionID, perm RWPerm) (*Page, error) {
 	// TODO: some code goes here
-	return nil, nil
+	page, err := file.readPage(pageNo)
+	if err != nil {
+		return nil, err
+	}
+	return page, nil
 }

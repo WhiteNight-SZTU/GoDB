@@ -48,6 +48,7 @@ dirty page, it's OK if tuples are renumbered when they are written back to disk.
 
 type heapPage struct {
 	// TODO: some code goes here
+
 }
 
 // Construct a new heap page
@@ -65,6 +66,7 @@ func (h *heapPage) getNumSlots() int {
 // no free slots.  Set the tuples rid and return it.
 func (h *heapPage) insertTuple(t *Tuple) (recordID, error) {
 	// TODO: some code goes here
+
 	return 0, nil //replace me
 }
 
@@ -101,7 +103,7 @@ func (p *heapPage) getFile() *DBFile {
 // page, written using the Tuple.writeTo method.
 func (h *heapPage) toBuffer() (*bytes.Buffer, error) {
 	// TODO: some code goes here
-	return nil,nil //replace me
+	return nil, nil //replace me
 
 }
 

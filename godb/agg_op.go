@@ -155,6 +155,7 @@ func getFinalizedTuplesIterator(a *Aggregator, groupByList []*Tuple, aggState ma
 	curGbyTuple := 0 // "captured" counter to track the current tuple we are iterating over
 	return func() (*Tuple, error) {
 		// TODO: some code goes here
+		_ = curGbyTuple
 		return nil, nil // TODO change me
 	}
 }

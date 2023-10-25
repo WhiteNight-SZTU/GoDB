@@ -37,6 +37,7 @@ func TestGetPage(t *testing.T) {
 	}
 	bp.BeginTransaction(tid)
 	//expect 6 pages
+
 	for i := 0; i < 6; i++ {
 		pg, err := bp.GetPage(hf, i, tid, ReadPerm)
 		if pg == nil || err != nil {
