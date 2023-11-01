@@ -27,6 +27,7 @@ var c chan int = make(chan int, numConcurrentThreads*2)
 func readXaction(hf *HeapFile, bp *BufferPool, wg *sync.WaitGroup) {
 	tid := NewTID()
 	bp.BeginTransaction(tid)
+	pgCnt1 := hf.NumPages()
 	it, _ := hf.Iterator(tid)
 	cnt1 := 0
 
@@ -55,7 +56,7 @@ func readXaction(hf *HeapFile, bp *BufferPool, wg *sync.WaitGroup) {
 		}
 		cnt2++
 	}
-	if cnt1 == cnt2 {
+	if cnt1 == cnt2 || pgCnt1 != hf.NumPages() {
 		//fmt.Printf("read same number of tuples both iterators (%d)\n", cnt1)
 		c <- 1
 	} else {
@@ -230,9 +231,9 @@ func (i *Singleton) Iterator(tid TransactionID) (func() (*Tuple, error), error) 
 
 // Run threads transactions, each each of which reads
 // a single tuple from a page, deletes the tuple, and re-inserts
-// it with an incremented value
-// Since there is no deadlock, eventually all transactions
-// should commit and the value should have incremented threads times.
+// it with an incremented value.
+// There will be deadlocks, so your deadlock handling will have to be correct to allow
+// all transactions to be committed and the value to be incremented threads times.
 func validateTransactions(t *testing.T, threads int) {
 	bp, hf, _, _, _, t2 := transactionTestSetUpVarLen(t, 1, 1)
 
@@ -400,7 +401,7 @@ func TestAbortEviction(t *testing.T) {
 	bp.BeginTransaction(tid2)
 
 	// tuple should not exist after abortion
-	if exists, err := tupExists(t1, tid, hf); !(exists == false && err == nil) {
+	if exists, err := tupExists(t1, tid2, hf); !(exists == false && err == nil) {
 		t.Errorf("Tuple should not exist")
 	}
 }
