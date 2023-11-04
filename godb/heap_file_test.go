@@ -1,6 +1,7 @@
 package godb
 
 import (
+	"fmt"
 	"os"
 	"testing"
 )
@@ -42,15 +43,55 @@ func makeTestVars() (TupleDesc, Tuple, Tuple, *HeapFile, *BufferPool, Transactio
 	return td, t1, t2, hf, bp, tid
 
 }
-
+func TestResetDat(t *testing.T) { //Todo: Delete this function
+	os.Remove(TestingFile)
+}
+func TestReadPage(t *testing.T) { //Todo: Delete this function
+	var td = TupleDesc{Fields: []FieldType{
+		{Fname: "name", Ftype: StringType},
+		{Fname: "age", Ftype: IntType},
+	}}
+	bp := NewBufferPool(3)
+	os.Remove(TestingFile)
+	hf, _ := NewHeapFile(TestingFile, &td, bp)
+	var t1 = Tuple{
+		Desc: td,
+		Fields: []DBValue{
+			StringField{"sam"},
+			IntField{25},
+		}}
+	hf.insertTuple(&t1, NewTID())
+	pg, _ := bp.GetPage(hf, 0, NewTID(), ReadPerm)
+	fmt.Println(pg)
+}
+func TestNumPage(t *testing.T) { //Todo: Delete this function
+	var td = TupleDesc{Fields: []FieldType{
+		{Fname: "name", Ftype: StringType},
+		{Fname: "age", Ftype: IntType},
+	}}
+	bp := NewBufferPool(3)
+	os.Remove(TestingFile)
+	hf, _ := NewHeapFile(TestingFile, &td, bp)
+	var t1 = Tuple{
+		Desc: td,
+		Fields: []DBValue{
+			StringField{"sam"},
+			IntField{25},
+		}}
+	hf.insertTuple(&t1, NewTID())
+	fmt.Println(hf.NumPages())
+	_ = hf
+}
 func TestCreateAndInsertHeapFile(t *testing.T) {
 	_, t1, t2, hf, _, tid := makeTestVars()
 	hf.insertTuple(&t1, tid)
 	hf.insertTuple(&t2, tid)
+	//fmt.Println(hf.NumPages()) //Todo: Delete this line
 	iter, _ := hf.Iterator(tid)
 	i := 0
 	for {
 		t, _ := iter()
+
 		if t == nil {
 			break
 		}

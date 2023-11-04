@@ -1,7 +1,6 @@
 package godb
 
-import (
-)
+import "os"
 
 // This function should load the csv file in fileName into a heap file (see
 // [HeapFile.LoadFromCSV]) and then compute the sum of the integer field in
@@ -14,5 +13,16 @@ import (
 // reinserted into this file unless you delete (e.g., with [os.Remove] it before
 // calling NewHeapFile.
 func computeFieldSum(fileName string, td TupleDesc, sumField string) (int, error) {
+	bp := NewBufferPool(3)
+	hp, err := NewHeapFile(fileName, &td, bp)
+	if err != nil {
+		return 0, err
+	}
+	f, err := os.Open(fileName)
+	if err != nil {
+		return 0, err
+	}
+	hp.LoadFromCSV(f, true, ",", false)
+
 	return 0, nil // replace me
 }

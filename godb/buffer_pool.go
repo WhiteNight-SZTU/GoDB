@@ -15,18 +15,25 @@ const (
 
 type BufferPool struct {
 	// TODO: some code goes here
+	NumPages int
+	Pages    map[any]*Page
 }
 
 // Create a new BufferPool with the specified number of pages
 func NewBufferPool(numPages int) *BufferPool {
 	// TODO: some code goes here
-	return &BufferPool{}
+	return &BufferPool{NumPages: numPages, Pages: make(map[any]*Page, numPages)}
 }
 
 // Testing method -- iterate through all pages in the buffer pool
 // and flush them using [DBFile.flushPage]. Does not need to be thread/transaction safe
 func (bp *BufferPool) FlushAllPages() {
 	// TODO: some code goes here
+	for _, page := range bp.Pages {
+		p := *page
+		file := *p.getFile()
+		file.flushPage(&p)
+	}
 }
 
 // Abort the transaction, releasing locks. Because GoDB is FORCE/NO STEAL, none
@@ -63,9 +70,16 @@ func (bp *BufferPool) BeginTransaction(tid TransactionID) error {
 // of pages in the BufferPool in a map keyed by the [DBFile.pageKey].
 func (bp *BufferPool) GetPage(file DBFile, pageNo int, tid TransactionID, perm RWPerm) (*Page, error) {
 	// TODO: some code goes here
-	page, err := file.readPage(pageNo)
-	if err != nil {
-		return nil, err
+	key := file.pageKey(pageNo)
+	if bp.Pages[key] == nil {
+		page, err := file.readPage(pageNo)
+		if err != nil {
+			return nil, err
+		}
+		bp.Pages[key] = page
+		return bp.Pages[key], nil
+	} else {
+		return bp.Pages[key], nil
 	}
-	return page, nil
+
 }
