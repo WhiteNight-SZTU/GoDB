@@ -2,6 +2,7 @@ package godb
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
 	"sync"
 	"testing"
@@ -25,64 +26,74 @@ const numConcurrentThreads int = 20
 var c chan int = make(chan int, numConcurrentThreads*2)
 
 func readXaction(hf *HeapFile, bp *BufferPool, wg *sync.WaitGroup) {
-	tid := NewTID()
-	bp.BeginTransaction(tid)
-	pgCnt1 := hf.NumPages()
-	it, _ := hf.Iterator(tid)
-	cnt1 := 0
 
 	for {
-		t, err := it()
-		if err != nil {
-			fmt.Print(err.Error())
+	start:
+		tid := NewTID()
+		bp.BeginTransaction(tid)
+		pgCnt1 := hf.NumPages()
+		it, _ := hf.Iterator(tid)
+		cnt1 := 0
+
+		for {
+			t, err := it()
+			if err != nil {
+				// Assume this is because of a deadlock, restart txn
+				time.Sleep(time.Duration(rand.Intn(8)) * 100 * time.Microsecond)
+				goto start
+			}
+			if t == nil {
+				break
+			}
+			cnt1++
+		}
+
+		it, _ = hf.Iterator(tid)
+		cnt2 := 0
+		for {
+			t, err := it()
+			if err != nil {
+				// Assume this is because of a deadlock, restart txn
+				time.Sleep(time.Duration(rand.Intn(8)) * 100 * time.Microsecond)
+				goto start
+			}
+			if t == nil {
+				break
+			}
+			cnt2++
+		}
+		if cnt1 == cnt2 || pgCnt1 != hf.NumPages() {
+			//fmt.Printf("read same number of tuples both iterators (%d)\n", cnt1)
+			c <- 1
+		} else {
+			fmt.Printf("ERROR: read different number of tuples both iterators (%d, %d)\n", cnt1, cnt2)
 			c <- 0
-			return
 		}
-		if t == nil {
-			break
-		}
-		cnt1++
+		bp.CommitTransaction(tid)
+		wg.Done()
+		return
 	}
-
-	it, _ = hf.Iterator(tid)
-	cnt2 := 0
-	for {
-		t, err := it()
-		if err != nil {
-			fmt.Printf("error: %s", err.Error())
-		}
-		if t == nil {
-			break
-		}
-		cnt2++
-	}
-	if cnt1 == cnt2 || pgCnt1 != hf.NumPages() {
-		//fmt.Printf("read same number of tuples both iterators (%d)\n", cnt1)
-		c <- 1
-	} else {
-		fmt.Printf("ERROR: read different number of tuples both iterators (%d, %d)\n", cnt1, cnt2)
-		c <- 0
-	}
-	bp.CommitTransaction(tid)
-	wg.Done()
 }
 
 func writeXaction(hf *HeapFile, bp *BufferPool, writeTuple Tuple, wg *sync.WaitGroup) {
 	//_, t1, _, _, _ := makeTestVars()
 
-	tid := NewTID()
-	bp.BeginTransaction(tid)
-	for i := 0; i < 10; i++ {
-		err := hf.insertTuple(&writeTuple, tid)
-		if err != nil {
-			fmt.Print(err.Error())
-			c <- 0
-			goto done
+	for {
+	start:
+		tid := NewTID()
+		bp.BeginTransaction(tid)
+		for i := 0; i < 10; i++ {
+			err := hf.insertTuple(&writeTuple, tid)
+			if err != nil {
+				// Assume this is because of a deadlock, restart txn
+				time.Sleep(time.Duration(rand.Intn(8)) * 100 * time.Microsecond)
+				goto start
+			}
 		}
+		bp.CommitTransaction(tid)
+		break
 	}
 	c <- 1
-done:
-	bp.CommitTransaction(tid)
 	wg.Done()
 }
 

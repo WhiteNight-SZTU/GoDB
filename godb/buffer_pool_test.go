@@ -17,23 +17,21 @@ func TestGetPage(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%v", err)
 		}
-		bp.CommitTransaction(tid)
-
-		//hack to force dirty pages to disk
-		//because CommitTransaction may not be implemented
-		//yet if this is called in lab 1
-		for i := 0; i < 6; i++ {
+		// hack to force dirty pages to disk
+		// because CommitTransaction may not be implemented
+		// yet if this is called in lab 1 or 2
+		for i := 0; i < hf.NumPages(); i++ {
 			pg, err := bp.GetPage(hf, i, tid, ReadPerm)
 			if pg == nil || err != nil {
-				break
+				t.Fatal("page nil or error", err)
 			}
 			if (*pg).isDirty() {
 				(*(*pg).getFile()).flushPage(pg)
 				(*pg).setDirty(false)
 			}
-
 		}
-
+		// commit transaction
+		bp.CommitTransaction(tid)
 	}
 	bp.BeginTransaction(tid)
 	//expect 6 pages
@@ -46,7 +44,6 @@ func TestGetPage(t *testing.T) {
 	}
 	_, err := bp.GetPage(hf, 7, tid, ReadPerm)
 	if err == nil {
-		t.Fatalf("expected to get page 7 but failed")
+		t.Fatalf("No error when getting page 7 from a file with 6 pages.")
 	}
-
 }
